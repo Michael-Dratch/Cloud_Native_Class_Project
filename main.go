@@ -55,7 +55,17 @@ const (
 //						   use it.  See github.com/spf13/cobra for information
 //						   on how to use it.
 //
-//	 YOUR ANSWER: <GOES HERE>
+//	 YOUR ANSWER: 
+/*
+		This function first defines the valid flags that the program accepts.
+		It uses the flag Var function corrosponding to the type of each flag
+		to define the variable that will accept the flag value, the flag name, 
+		initial value, and usage message. Then the flags are parsed and the function 
+		checks to make sure that at least one valid flag has been set.
+		Finally, the function uses a switch statement to check the type of the flag
+		and set the appOpt variable to the correct operation value defined above,
+		which is then returned. 
+*/
 func processCmdLineFlags() (AppOptType, error) {
 	flag.StringVar(&dbFileNameFlag, "db", "./data/todo.json", "Name of the database file")
 
