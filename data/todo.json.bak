@@ -1,17 +1,7 @@
 [
   {
-    "id": 5,
-    "title": "UPDATE / GoLang",
-    "done": false
-  },
-  {
     "id": 1,
     "title": "Learn Go / GoLang",
-    "done": true
-  },
-  {
-    "id": 4,
-    "title": "UPDATE / GoLang",
     "done": false
   },
   {
@@ -22,6 +12,11 @@
   {
     "id": 3,
     "title": "Learn Cloud Native Architecture",
+    "done": false
+  },
+  {
+    "id": 4,
+    "title": "Learn Why Professor Mitchell is the BEST! :-)",
     "done": false
   }
 ]

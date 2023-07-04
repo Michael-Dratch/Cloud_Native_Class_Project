@@ -176,13 +176,11 @@ func (t *ToDo) UpdateItem(item ToDoItem) error {
 func (t *ToDo) GetItem(id int) (ToDoItem, error) {
 	err := t.loadDB()
 	if err != nil { 
-		var emptyItem ToDoItem
-		return emptyItem, err 
+		return ToDoItem{}, err 
 	}
 	_, ok := t.toDoMap[id]
 	if ok == false {
-		var emptyItem ToDoItem
-		return emptyItem, errors.New("Error: Item does not exist")
+		return ToDoItem{}, errors.New("Error: Item does not exist")
 	}
 	return t.toDoMap[id], nil
 }
@@ -235,6 +233,7 @@ func (t *ToDo) JsonToItem(jsonString string) (ToDoItem, error) {
 	var item ToDoItem
 	err := json.Unmarshal([]byte(jsonString), &item)
 	if err != nil {
+		fmt.Println(jsonString)
 		return ToDoItem{}, err
 	}
 

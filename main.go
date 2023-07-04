@@ -115,7 +115,12 @@ func processCmdLineFlags() (AppOptType, error) {
 		case "s":
 			//For extra credit you will need to change some things here
 			//and also in main under the CHANGE_ITEM_STATUS case
-			appOpt = CHANGE_ITEM_STATUS
+			if appOpt == QUERY_DB_ITEM{
+				appOpt = CHANGE_ITEM_STATUS
+			} else {
+				fmt.Println("Must include query flag (-q) with item id in order to change item status (-s flag)")
+				appOpt = INVALID_APP_OPT
+			}
 		default:
 			appOpt = INVALID_APP_OPT
 		}
@@ -209,10 +214,19 @@ func main() {
 		}
 		fmt.Println("Ok")
 	case CHANGE_ITEM_STATUS:
-		//For the CHANGE_ITEM_STATUS extra credit you will also
-		//need to add some code here
 		fmt.Println("Running CHANGE_ITEM_STATUS...")
-		fmt.Println("Not implemented yet, but it can be for extra credit")
+		item, err := todo.GetItem(queryFlag)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			break
+		}
+		item.IsDone = itemStatusFlag
+		err = todo.UpdateItem(item)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			break
+		}
+		todo.PrintItem(item)
 		fmt.Println("Ok")
 	default:
 		fmt.Println("INVALID_APP_OPT")
