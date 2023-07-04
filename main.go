@@ -2,11 +2,12 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 
 	"drexel.edu/todo/db"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // Global variables to hold the command line flags to drive the todo CLI
@@ -20,7 +21,6 @@ var (
 	updateFlag     string
 	deleteFlag     int
 )
-
 type AppOptType int
 
 // To make the code a little more clean we will use the following
@@ -38,11 +38,30 @@ const (
 	INVALID_APP_OPT
 )
 
+var rootCmd = &cobra.Command{
+	Use: "ToDo",
+	Short: "A command line todo list application",
+	Run: func(cmd *cobra.Command, args []string){
+		opts, err := processCmdLineFlags(cmd)
+		if err!= nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		processOptions(opts)
+	},
+}
+
+func init() {
+	rootCmd.Flags().StringVar(&dbFileNameFlag, "db", "./data/todo.json", "Name of the database file")
+	rootCmd.Flags().BoolVarP(&listFlag, "l", "l", false, "List all the items in the database")
+	rootCmd.Flags().IntVarP(&queryFlag, "q","q", 0, "Query an item in the database")
+	rootCmd.Flags().StringVarP(&addFlag, "a","a", "", "Add an item to the database")
+	rootCmd.Flags().StringVarP(&updateFlag, "u","u", "", "Update an item in the database")
+	rootCmd.Flags().IntVarP(&deleteFlag, "d","d", 0, "Delete an item from the database")
+	rootCmd.Flags().BoolVarP(&itemStatusFlag, "s","s", false, "Change item 'done' status to true or false")
+}
+
 // processCmdLineFlags parses the command line flags for our CLI
-//
-// TODO: This function uses the flag package to parse the command line
-//		 flags.  The flag package is not very flexible and can lead to
-//		 some confusing code.
 
 //			 REQUIRED:     Study the code below, and make sure you understand
 //						   how it works.  Go online and readup on how the
@@ -66,29 +85,20 @@ const (
 		and set the appOpt variable to the correct operation value defined above,
 		which is then returned. 
 */
-func processCmdLineFlags() (AppOptType, error) {
-	flag.StringVar(&dbFileNameFlag, "db", "./data/todo.json", "Name of the database file")
-
-	flag.BoolVar(&listFlag, "l", false, "List all the items in the database")
-	flag.IntVar(&queryFlag, "q", 0, "Query an item in the database")
-	flag.StringVar(&addFlag, "a", "", "Add an item to the database")
-	flag.StringVar(&updateFlag, "u", "", "Update an item in the database")
-	flag.IntVar(&deleteFlag, "d", 0, "Delete an item from the database")
-	flag.BoolVar(&itemStatusFlag, "s", false, "Change item 'done' status to true or false")
-
-	flag.Parse()
-
+func processCmdLineFlags(cmd *cobra.Command) (AppOptType, error) {
 	var appOpt AppOptType = INVALID_APP_OPT
 
 	//show help if no flags are set
 	if len(os.Args) == 1 {
-		flag.Usage()
+		fmt.Println("Flags: ")
+		printFlagUsage(cmd)
+	
 		return appOpt, errors.New("no flags were set")
 	}
 
 	// Loop over the flags and check which ones are set, set appOpt
 	// accordingly
-	flag.Visit(func(f *flag.Flag) {
+	cmd.Flags().Visit(func(f *pflag.Flag) {
 		switch f.Name {
 		case "l":
 			appOpt = LIST_DB_ITEM
@@ -100,21 +110,7 @@ func processCmdLineFlags() (AppOptType, error) {
 			appOpt = UPDATE_DB_ITEM
 		case "d":
 			appOpt = DELETE_DB_ITEM
-
-		//TODO: EXTRA CREDIT - Implment the -s flag that changes the
-		//done status of an item in the database.  For example -s=true
-		//will set the done status for a particular item to true, and
-		//-s=false will set the done states for a particular item to
-		//false.
-		//
-		//HINT FOR EXTRA CREDIT
-		//Note the -s option also requires an id for the item to that
-		//you want to change.  I recommend you use the -q option to
-		//specify the item id.  Therefore, the -s option is only valid
-		//if the -q option is also set
 		case "s":
-			//For extra credit you will need to change some things here
-			//and also in main under the CHANGE_ITEM_STATUS case
 			if appOpt == QUERY_DB_ITEM{
 				appOpt = CHANGE_ITEM_STATUS
 			} else {
@@ -128,25 +124,24 @@ func processCmdLineFlags() (AppOptType, error) {
 
 	if appOpt == INVALID_APP_OPT || appOpt == NOT_IMPLEMENTED {
 		fmt.Println("Invalid option set or the desired option is not currently implemented")
-		flag.Usage()
+		printFlagUsage(cmd)
 		return appOpt, errors.New("no flags or unimplemented were set")
 	}
 
 	return appOpt, nil
 }
 
-// main is the entry point for our todo CLI application.  It processes
-// the command line flags and then uses the db package to perform the
-// requested operation
-func main() {
+func printFlagUsage(cmd *cobra.Command){
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		if f.Name == "db"{
+			fmt.Println("-- "+f.Name + " " + f.Usage)
+		} else{
+			fmt.Println("- "+f.Name + " " + f.Usage)
+		}
+	})
+}
 
-	//Process the command line flags
-	opts, err := processCmdLineFlags()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
+func processOptions(opts AppOptType){
 	//Create a new db object
 	todo, err := db.New(dbFileNameFlag)
 	if err != nil {
@@ -231,4 +226,15 @@ func main() {
 	default:
 		fmt.Println("INVALID_APP_OPT")
 	}
+}
+
+// main is the entry point for our todo CLI application.  It processes
+// the command line flags and then uses the db package to perform the
+// requested operation
+func main() {
+	Execute()
+}
+
+func Execute() error {
+	return rootCmd.Execute()
 }
