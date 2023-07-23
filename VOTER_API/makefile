@@ -23,14 +23,28 @@ run:
 
 .PHONY: load-db
 load-db:
-	curl -d '{ "id": 1, "title": "Learn Go / GoLang", "done": false }' -H "Content-Type: application/json" -X POST http://localhost:1080/todo 
-	curl -d '{ "id": 2, "title": "Learn Kubernetes", "done": true}' -H "Content-Type: application/json" -X POST http://localhost:1080/todo 
-	curl -d '{ "id": 3, "title": "Learn Cloud Native Architecture","done": false}' -H "Content-Type: application/json" -X POST http://localhost:1080/todo 
-	curl -d '{"id": 4,"title": "Learn Why Professor Mitchell is the BEST! :-)","done": true}' -H "Content-Type: application/json" -X POST http://localhost:1080/todo
+
+	$Body = @{
+		id = 2
+		FirstName = "test"
+		LastName = "test"
+		VoterHistory = ""
+	}
+
+	$JsonBody = $Body | ConvertTo-Json
+
+Invoke-RestMethod
+		-Method = "POST"
+		-Uri =  "http://localhost:1080/voters/2"
+		-Body = $JsonBody
+		-ContentType = "application/json"
+	
+
+
 
 .PHONY: update-2
 update-2:
-	curl -d '{ "id": 2, "title": "$(title)", "done": false }' -H "Content-Type: application/json" -X PUT http://localhost:1080/todo 
+	curl -d '{ "id": 2, "title": "$(title)", "done": false }' -H "Accept: application/json" -H "Content-Type: application/json" -X PUT http://localhost:1080/todo 
 
 .PHONY: get-by-id
 get-by-id:

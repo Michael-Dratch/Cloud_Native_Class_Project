@@ -76,6 +76,16 @@ func (v *VoterList) GetVoter(voterID uint) (Voter, error){
 	}
 } 
 
+func (v *VoterList) AddVoter(voter Voter) error {
+	_, ok := v.Voters[voter.VoterID]
+	if ok {
+		return errors.New("Voter already exists")
+	}
+
+	v.Voters[voter.VoterID] = voter
+
+	return nil
+}
 
 
 /*

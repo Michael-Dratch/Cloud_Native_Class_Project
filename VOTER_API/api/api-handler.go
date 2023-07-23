@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -51,15 +52,13 @@ func (voterAPI *VoterAPI) ListAllVoters(c *gin.Context) {
 
 func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
 
-	idS := c.Param("id")
-	id64, err := strconv.ParseUint(idS, 10, 64)
+	id, err := getIDParamater(c)
 	if err != nil {
-		log.Println("Error converting id to int64: ", err)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	voter, err := voterAPI.db.GetVoter((uint(id64)))
+	voter, err := voterAPI.db.GetVoter(id)
 	if err != nil {
 		log.Println("Voter not found: ", err)
 		c.AbortWithStatus(http.StatusNotFound)
@@ -68,6 +67,60 @@ func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
 
 	c.JSON(http.StatusOK, voter)
 }
+
+func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
+	
+	id, err := getIDParamater(c)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var voter db.Voter
+	if err := c.ShouldBindJSON(&voter); err != nil {
+		log.Println("Error binding JSON: ", err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	/* 
+	Making the ID a parameter in the url seems redundent and creates the possibility
+	of a new error (ID mismatch in the url and the json body). I wonder if including this 
+	is valuable because it makes it clear the url pattern is related to a single voter
+	or if it could be removed so that the add voter end point would just be a POST call 
+	to /voters with the id and other data in the requet body
+	*/
+	if id != uint(voter.VoterID) {
+		log.Println("ERROR: ID in url and request body do not match")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	c.JSON(http.StatusOK, db.Voter{})
+
+	if err := voterAPI.db.AddVoter(voter); err != nil {
+		log.Println("Error adding voter: ", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, voter)
+}
+
+func (voterAPI *VoterAPI) GetVoterHistory(c *gin.Context) {
+}
+
+
+func getIDParamater(c *gin.Context) (uint, error){
+	idS := c.Param("id")
+	id64, err := strconv.ParseUint(idS, 10, 64)
+	if err != nil {
+		log.Println("Error converting id to int64: ", err)
+		return 0, errors.New("Error converting id to int64")
+	}
+	return uint(id64), nil
+}
+
 
 
 
