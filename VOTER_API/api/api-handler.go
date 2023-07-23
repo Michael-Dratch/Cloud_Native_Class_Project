@@ -3,6 +3,7 @@ package api
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"voter-api/db"
 
@@ -47,6 +48,28 @@ func (voterAPI *VoterAPI) ListAllVoters(c *gin.Context) {
 
 	c.JSON(http.StatusOK, voterList)
 }
+
+func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
+
+	idS := c.Param("id")
+	id64, err := strconv.ParseUint(idS, 10, 64)
+	if err != nil {
+		log.Println("Error converting id to int64: ", err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	voter, err := voterAPI.db.GetVoter((uint(id64)))
+	if err != nil {
+		log.Println("Voter not found: ", err)
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	c.JSON(http.StatusOK, voter)
+}
+
+
 
 /*
 

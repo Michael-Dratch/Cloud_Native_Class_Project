@@ -38,7 +38,7 @@ func main() {
 	}
 
 	r.GET("/voters", apiHandler.ListAllVoters)
-	//r.GET("/voters/:id", apiHandler.GetVoter)
+	r.GET("/voters/:id", apiHandler.GetVoter)
 	//r.POST("/voters/:id", apiHandler.AddVoter)
 	//r.GET("/voters/:id/polls", apiHandler.GetVoterHistory)
 	//r.GET("/voters/:id/polls/:pollid", apiHandler.GetVoterPoll)

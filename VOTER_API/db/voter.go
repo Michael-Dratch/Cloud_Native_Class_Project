@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"time"
 )
 
@@ -26,6 +27,12 @@ func New() (*VoterList, error){
 		Voters: make(map[uint]Voter),
 	}
 
+	voterList.Voters[1] = Voter{
+		VoterID: 1,
+		FirstName: "Michael",
+		LastName: "Dratch",
+		VoteHistory: nil,
+	}
 	return voterList, nil
 }
 
@@ -57,6 +64,16 @@ func (v *VoterList) GetAllVoters() ([]Voter, error){
 	}
 
 	return voters, nil
+} 
+
+func (v *VoterList) GetVoter(voterID uint) (Voter, error){
+	
+	voter, ok := v.Voters[voterID]
+	if ok {
+		return voter, nil
+	} else {
+		return Voter{}, errors.New("Voter ID does not exist")
+	}
 } 
 
 
