@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"voter-api/db"
 
@@ -52,7 +53,7 @@ func (voterAPI *VoterAPI) ListAllVoters(c *gin.Context) {
 
 func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
 
-	id, err := getIDParamater(c)
+	id, err := getParameterUint(c, "id")
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -70,7 +71,7 @@ func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
 
 func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
 	
-	id, err := getIDParamater(c)
+	id, err := getParameterUint(c, "id")
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -96,8 +97,6 @@ func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, db.Voter{})
-
 	if err := voterAPI.db.AddVoter(voter); err != nil {
 		log.Println("Error adding voter: ", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -108,17 +107,84 @@ func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
 }
 
 func (voterAPI *VoterAPI) GetVoterHistory(c *gin.Context) {
+
+	id, err := getParameterUint(c, "id")
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	voterHistory, err := voterAPI.db.GetVoterHistory(id)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	c.JSON(http.StatusOK, voterHistory)
+}
+
+func (voterAPI *VoterAPI) GetVoterPoll(c *gin.Context) {
+	id, err := getParameterUint(c, "id")
+	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+
+	pollID, err := getParameterUint(c, "pollid")
+	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+
+	poll, err := voterAPI.db.GetVoterPoll(id, pollID)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	c.JSON(http.StatusOK, poll)
+}
+
+func (voterAPI *VoterAPI) AddVoterPoll(c *gin.Context) {
+	
+	voterID, err := getParameterUint(c, "id")
+	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+
+	pollID, err := getParameterUint(c, "pollid")
+	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+
+
+	var voterPoll db.VoterPoll
+	if err := c.ShouldBindJSON(&voterPoll); err != nil {
+		log.Println("Error binding JSON: ", err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	voterPoll.VoteDate = time.Now()
+
+	if pollID != uint(voterPoll.PollID) {
+		log.Println("ERROR: poll ID in url and request body do not match")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+
+	if err := voterAPI.db.AddVoterPoll(voterID, voterPoll); err != nil {
+		log.Println("Error adding voter poll: ", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, voterPoll)
 }
 
 
-func getIDParamater(c *gin.Context) (uint, error){
-	idS := c.Param("id")
-	id64, err := strconv.ParseUint(idS, 10, 64)
+
+
+
+
+
+func getParameterUint(c *gin.Context, name string) (uint, error) {
+	paramS := c.Param(name)
+	param64, err := strconv.ParseUint(paramS, 10, 64)
 	if err != nil {
-		log.Println("Error converting id to int64: ", err)
-		return 0, errors.New("Error converting id to int64")
+		return 0, errors.New("Error converting parameter to int64")
 	}
-	return uint(id64), nil
+	return uint(param64), nil
 }
 
 

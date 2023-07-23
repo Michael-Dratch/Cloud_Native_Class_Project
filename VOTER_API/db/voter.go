@@ -2,10 +2,11 @@ package db
 
 import (
 	"errors"
+	"log"
 	"time"
 )
 
-type voterPoll struct {
+type VoterPoll struct {
 	PollID uint
 	VoteDate time.Time
 }
@@ -14,7 +15,7 @@ type Voter struct {
 	VoterID uint
 	FirstName string
 	LastName string
-	VoteHistory []voterPoll
+	VoteHistory []VoterPoll
 }
 
 type VoterList struct {
@@ -27,12 +28,15 @@ func New() (*VoterList, error){
 		Voters: make(map[uint]Voter),
 	}
 
+	history := make ([]VoterPoll, 0)
+	history = append(history, VoterPoll{PollID:1, VoteDate: time.Now()})
 	voterList.Voters[1] = Voter{
 		VoterID: 1,
 		FirstName: "Michael",
 		LastName: "Dratch",
-		VoteHistory: nil,
+		VoteHistory: history,
 	}
+
 	return voterList, nil
 }
 
@@ -41,14 +45,14 @@ func NewVoter(voterID uint, firstName string, lastName string) (*Voter, error){
 		VoterID: voterID,
 		FirstName: firstName,
 		LastName: lastName,
-		VoteHistory: make ([]voterPoll, 0),
+		VoteHistory: make ([]VoterPoll, 0),
 	}
 
 	return voter, nil
 }
 
-func NewVoterPoll(pollID uint) (*voterPoll, error){
-	voterPoll := &voterPoll{
+func NewVoterPoll(pollID uint) (*VoterPoll, error){
+	voterPoll := &VoterPoll{
 		PollID: pollID,
 		VoteDate: time.Now(),
 	}
@@ -84,6 +88,48 @@ func (v *VoterList) AddVoter(voter Voter) error {
 
 	v.Voters[voter.VoterID] = voter
 
+	return nil
+}
+
+func (v *VoterList) GetVoterHistory(voterID uint) ([]VoterPoll, error){
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return make([]VoterPoll, 0) , errors.New("Voter ID does not exist")
+	}
+	
+	return voter.VoteHistory, nil
+	
+}
+
+func (v *VoterList) GetVoterPoll(voterID uint, pollID uint) (VoterPoll, error){
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return VoterPoll{} , errors.New("Voter ID does not exist")
+	} 
+
+	for _, poll := range voter.VoteHistory{
+		if poll.PollID == pollID{
+			return poll, nil
+		}
+	}
+	log.Println("Error: Poll ID does not exist for this voter")
+	return VoterPoll{}, errors.New("Poll ID does not exist for this voter")
+}
+
+func (v *VoterList) AddVoterPoll(voterID uint, newPoll VoterPoll) error{
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return errors.New("Voter ID does not exist")
+	} 
+
+	for _, poll := range voter.VoteHistory{
+		if newPoll.PollID == poll.PollID{
+			return errors.New("Poll ID already exists for this voter")
+		}
+	}
+
+	voter.VoteHistory = append(voter.VoteHistory, newPoll)
+	v.Voters[voterID] = voter
 	return nil
 }
 
