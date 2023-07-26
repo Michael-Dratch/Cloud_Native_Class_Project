@@ -129,8 +129,6 @@ func (voterAPI *VoterAPI) UpdateVoter(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, voter)
-	return
-
 }
 
 func (voterAPI *VoterAPI) DeleteVoter(c *gin.Context) {
@@ -148,8 +146,6 @@ func (voterAPI *VoterAPI) DeleteVoter(c *gin.Context) {
 	}
 	
 	c.Status(http.StatusOK)
-	return
-
 }
 
 func (voterAPI *VoterAPI) GetVoterHistory(c *gin.Context) {
@@ -189,6 +185,7 @@ func (voterAPI *VoterAPI) GetVoterPoll(c *gin.Context) {
 		voterAPI.handleBadRequestError(c, "Voter has not voted in this poll", err)
 		return
 	}
+
 	c.JSON(http.StatusOK, poll)
 }
 
@@ -205,7 +202,6 @@ func (voterAPI *VoterAPI) AddVoterPoll(c *gin.Context) {
 		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
 		return
 	}
-
 
 	var voterPoll db.VoterPoll
 	if err := c.ShouldBindJSON(&voterPoll); err != nil {
@@ -225,7 +221,6 @@ func (voterAPI *VoterAPI) AddVoterPoll(c *gin.Context) {
 		voterAPI.handleBadRequestError(c, "ERROR: Voter cannot vote in the same poll twice: ", err)
 		return
 	}
-
 
 	if err := voterAPI.db.AddVoterPoll(voterID, voterPoll); err != nil {
 		voterAPI.handleInternalServerError(c, "Error adding voter poll: ", err)
@@ -268,7 +263,6 @@ func (voterAPI *VoterAPI) UpdateVoterPoll(c *gin.Context) {
 
 	voterAPI.db.UpdateVoterPoll(voterID, pollID, voterPoll)
 	c.JSON(http.StatusOK, voterPoll)
-	return
 }
 
 func (voterAPI *VoterAPI) DeleteVoterPoll(c *gin.Context) {
@@ -293,9 +287,7 @@ func (voterAPI *VoterAPI) DeleteVoterPoll(c *gin.Context) {
 
 	voterAPI.db.DeleteVoterPoll(voterID, pollID)
 	c.Status(http.StatusOK)
-	return
 }
-
 
 func getParameterUint(c *gin.Context, name string) (uint, error) {
 	paramS := c.Param(name)

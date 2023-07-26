@@ -27,16 +27,7 @@ func New() (*VoterList, error){
 	voterList := &VoterList{
 		Voters: make(map[uint]Voter),
 	}
-
-	history := make ([]VoterPoll, 0)
-	history = append(history, VoterPoll{PollID:1, VoteDate: time.Now()})
-	voterList.Voters[1] = Voter{
-		VoterID: 1,
-		FirstName: "Michael",
-		LastName: "Dratch",
-		VoteHistory: history,
-	}
-
+	
 	return voterList, nil
 }
 
@@ -134,7 +125,6 @@ func (v *VoterList) GetVoterHistory(voterID uint) ([]VoterPoll, error){
 	}
 	
 	return voter.VoteHistory, nil
-	
 }
 
 func (v *VoterList) GetVoterPoll(voterID uint, pollID uint) (VoterPoll, error){
