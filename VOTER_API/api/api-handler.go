@@ -25,6 +25,15 @@ import (
 // this is a good design practice
 type VoterAPI struct {
 	db *db.VoterList
+	bootTime time.Time
+	totalCalls int
+	totalErrors int
+}
+
+type HealthCheckData struct {
+	UpTime string
+	TotalCalls int
+	TotalErrors int
 }
 
 func New() (*VoterAPI, error) {
@@ -33,14 +42,17 @@ func New() (*VoterAPI, error) {
 		return nil, err
 	}
 
-	return &VoterAPI{db: dbHandler}, nil
+	return &VoterAPI{   db: dbHandler, 
+						bootTime: time.Now(),
+						totalCalls: 0,
+						totalErrors: 0,}, nil
 }
 
 func (voterAPI *VoterAPI) ListAllVoters(c *gin.Context) {
+	voterAPI.totalCalls++
 	voterList, err := voterAPI.db.GetAllVoters()
 	if err != nil {
-		log.Println("Error Getting All Voters: ", err)
-		c.AbortWithStatus(http.StatusNotFound)
+		voterAPI.handleInternalServerError(c, "Error Getting All Voters: ", err)
 		return
 	}
 
@@ -52,17 +64,16 @@ func (voterAPI *VoterAPI) ListAllVoters(c *gin.Context) {
 }
 
 func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
-
+	voterAPI.totalCalls++
 	id, err := getParameterUint(c, "id")
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
 		return
 	}
 
 	voter, err := voterAPI.db.GetVoter(id)
 	if err != nil {
-		log.Println("Voter not found: ", err)
-		c.AbortWithStatus(http.StatusNotFound)
+		voterAPI.handleBadRequestError(c, "Voter not found: ", err)
 		return
 	}
 
@@ -70,17 +81,17 @@ func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
 }
 
 func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
+	voterAPI.totalCalls++
 	
 	id, err := getParameterUint(c, "id")
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
 		return
 	}
 
 	var voter db.Voter
 	if err := c.ShouldBindJSON(&voter); err != nil {
-		log.Println("Error binding JSON: ", err)
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Error binding JSON: ", err)
 		return
 	}
 
@@ -88,18 +99,16 @@ func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
 	Making the ID a parameter in the url seems redundent and creates the possibility
 	of a new error (ID mismatch in the url and the json body). I wonder if including this 
 	is valuable because it makes it clear the url pattern is related to a single voter
-	or if it could be removed so that the add voter end point would just be a POST call 
+	or could be removed so that the add voter end point would just be a POST call 
 	to /voters with the id and other data in the requet body
 	*/
 	if id != uint(voter.VoterID) {
-		log.Println("ERROR: ID in url and request body do not match")
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "ERROR: ID in url and request body do not match", err)
 		return
 	}
 
 	if err := voterAPI.db.AddVoter(voter); err != nil {
-		log.Println("Error adding voter: ", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
+		voterAPI.handleInternalServerError(c, "Error adding voter: ", err)
 		return
 	}
 
@@ -107,17 +116,17 @@ func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
 }
 
 func (voterAPI *VoterAPI) GetVoterHistory(c *gin.Context) {
+	voterAPI.totalCalls++
 
 	id, err := getParameterUint(c, "id")
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
 		return
 	}
 
 	voterHistory, err := voterAPI.db.GetVoterHistory(id)
-
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Voter does not exist", err)
 		return
 	}
 
@@ -125,57 +134,69 @@ func (voterAPI *VoterAPI) GetVoterHistory(c *gin.Context) {
 }
 
 func (voterAPI *VoterAPI) GetVoterPoll(c *gin.Context) {
+	voterAPI.totalCalls++
 	id, err := getParameterUint(c, "id")
-	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+	if err != nil { 
+		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
+		return
+	}
 
 	pollID, err := getParameterUint(c, "pollid")
-	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+	if err != nil { 
+		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		return
+	}
 
 	poll, err := voterAPI.db.GetVoterPoll(id, pollID)
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Voter has not voted in this poll", err)
 		return
 	}
 	c.JSON(http.StatusOK, poll)
 }
 
 func (voterAPI *VoterAPI) AddVoterPoll(c *gin.Context) {
-	
+	voterAPI.totalCalls++
 	voterID, err := getParameterUint(c, "id")
-	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+	if err != nil { 
+		voterAPI.handleBadRequestError(c, "Error converting voter ID to int", err)
+		return
+	}
 
 	pollID, err := getParameterUint(c, "pollid")
-	if err != nil { c.AbortWithStatus(http.StatusBadRequest)}
+	if err != nil { 
+		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		return
+	}
 
 
 	var voterPoll db.VoterPoll
 	if err := c.ShouldBindJSON(&voterPoll); err != nil {
-		log.Println("Error binding JSON: ", err)
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "Error binding JSON: ", err)
 		return
 	}
+
 	voterPoll.VoteDate = time.Now()
 
 	if pollID != uint(voterPoll.PollID) {
-		log.Println("ERROR: poll ID in url and request body do not match")
-		c.AbortWithStatus(http.StatusBadRequest)
+		voterAPI.handleBadRequestError(c, "ERROR: poll ID in url and request body do not match", nil)
+		return
+	}
+
+	pollExists := voterAPI.db.DoesVoterPollExist(voterID, pollID)
+	if pollExists {
+		voterAPI.handleBadRequestError(c, "ERROR: Voter cannot vote in the same poll twice: ", err)
 		return
 	}
 
 
 	if err := voterAPI.db.AddVoterPoll(voterID, voterPoll); err != nil {
-		log.Println("Error adding voter poll: ", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
+		voterAPI.handleInternalServerError(c, "Error adding voter poll: ", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, voterPoll)
 }
-
-
-
-
-
 
 
 func getParameterUint(c *gin.Context, name string) (uint, error) {
@@ -187,236 +208,21 @@ func getParameterUint(c *gin.Context, name string) (uint, error) {
 	return uint(param64), nil
 }
 
-
-
-
-/*
-
-//Below we implement the API functions.  Some of the framework
-//things you will see include:
-//   1) How to extract a parameter from the URL, for example
-//	  the id parameter in /todo/:id
-//   2) How to extract the body of a POST request
-//   3) How to return JSON and a correctly formed HTTP status code
-//	  for example, 200 for OK, 404 for not found, etc.  This is done
-//	  using the c.JSON() function
-//   4) How to return an error code and abort the request.  This is
-//	  done using the c.AbortWithStatus() function
-
-// implementation for GET /todo
-// returns all todos
-func (td *ToDoAPI) ListAllTodos(c *gin.Context) {
-
-	todoList, err := td.db.GetAllItems()
-	if err != nil {
-		log.Println("Error Getting All Items: ", err)
-		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-	//Note that the database returns a nil slice if there are no items
-	//in the database.  We need to convert this to an empty slice
-	//so that the JSON marshalling works correctly.  We want to return
-	//an empty slice, not a nil slice. This will result in the json being []
-	if todoList == nil {
-		todoList = make([]db.ToDoItem, 0)
-	}
-
-	c.JSON(http.StatusOK, todoList)
+func (voterAPI *VoterAPI) handleBadRequestError(c *gin.Context, errorMessage string, err error) {
+	voterAPI.totalErrors++
+	log.Println(errorMessage, err)
+	c.AbortWithStatus(http.StatusBadRequest)
 }
 
-// implementation for GET /v2/todo
-// returns todos that are either done or not done
-// depending on the value of the done query parameter
-// for example, /v2/todo?done=true will return all
-// todos that are done.  Note you can have multiple
-// query parameters, for example /v2/todo?done=true&foo=bar
-func (td *ToDoAPI) ListSelectTodos(c *gin.Context) {
-	//lets first load the data
-	todoList, err := td.db.GetAllItems()
-	if err != nil {
-		log.Println("Error Getting Database Items: ", err)
-		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-	//If the database is empty, make an empty slice so that the
-	//JSON marshalling works correctly
-	if todoList == nil {
-		todoList = make([]db.ToDoItem, 0)
-	}
-
-	//Note that the query parameter is a string, so we
-	//need to convert it to a bool
-	doneS := c.Query("done")
-
-	//if the doneS is empty, then we will return all items
-	if doneS == "" {
-		c.JSON(http.StatusOK, todoList)
-		return
-	}
-
-	//Now we can handle the case where doneS is not empty
-	//and we need to filter the list based on the doneS value
-
-	done, err := strconv.ParseBool(doneS)
-	if err != nil {
-		log.Println("Error converting done to bool: ", err)
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	//Now we need to filter the list based on the done value
-	//that was passed in.  We will create a new slice and
-	//only add items that match the done value
-	var filteredList []db.ToDoItem
-	for _, item := range todoList {
-		if item.IsDone == done {
-			filteredList = append(filteredList, item)
-		}
-	}
-
-	//Note that the database returns a nil slice if there are no items
-	//in the database.  We need to convert this to an empty slice
-	//so that the JSON marshalling works correctly.  We want to return
-	//an empty slice, not a nil slice. This will result in the json being []
-	if filteredList == nil {
-		filteredList = make([]db.ToDoItem, 0)
-	}
-
-	c.JSON(http.StatusOK, filteredList)
+func (voterAPI *VoterAPI) handleInternalServerError(c *gin.Context, errorMessage string, err error) {
+	voterAPI.totalErrors++
+	log.Println(errorMessage, err)
+	c.AbortWithStatus(http.StatusInternalServerError)
 }
 
-// implementation for GET /todo/:id
-// returns a single todo
-func (td *ToDoAPI) GetToDo(c *gin.Context) {
-
-	//Note go is minimalistic, so we have to get the
-	//id parameter using the Param() function, and then
-	//convert it to an int64 using the strconv package
-	idS := c.Param("id")
-	id64, err := strconv.ParseInt(idS, 10, 32)
-	if err != nil {
-		log.Println("Error converting id to int64: ", err)
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	//Note that ParseInt always returns an int64, so we have to
-	//convert it to an int before we can use it.
-	todoItem, err := td.db.GetItem(int(id64))
-	if err != nil {
-		log.Println("Item not found: ", err)
-		c.AbortWithStatus(http.StatusNotFound)
-		return
-	}
-
-	//Git will automatically convert the struct to JSON
-	//and set the content-type header to application/json
-	c.JSON(http.StatusOK, todoItem)
+func (voterAPI * VoterAPI) HealthCheck(c *gin.Context) {
+	healthData := HealthCheckData{UpTime: time.Now().Sub(voterAPI.bootTime).String(), 
+									TotalCalls: voterAPI.totalCalls,
+									TotalErrors: voterAPI.totalErrors,}
+	c.IndentedJSON(http.StatusOK, healthData)
 }
-
-// implementation for POST /todo
-// adds a new todo
-func (td *ToDoAPI) AddToDo(c *gin.Context) {
-	var todoItem db.ToDoItem
-
-	//With HTTP based APIs, a POST request will usually
-	//have a body that contains the data to be added
-	//to the database.  The body is usually JSON, so
-	//we need to bind the JSON to a struct that we
-	//can use in our code.
-	//This framework exposes the raw body via c.Request.Body
-	//but it also provides a helper function ShouldBindJSON()
-	//that will extract the body, convert it to JSON and
-	//bind it to a struct for us.  It will also report an error
-	//if the body is not JSON or if the JSON does not match
-	//the struct we are binding to.
-	if err := c.ShouldBindJSON(&todoItem); err != nil {
-		log.Println("Error binding JSON: ", err)
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	if err := td.db.AddItem(todoItem); err != nil {
-		log.Println("Error adding item: ", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	c.JSON(http.StatusOK, todoItem)
-}
-
-// implementation for PUT /todo
-// Web api standards use PUT for Updates
-func (td *ToDoAPI) UpdateToDo(c *gin.Context) {
-	var todoItem db.ToDoItem
-	if err := c.ShouldBindJSON(&todoItem); err != nil {
-		log.Println("Error binding JSON: ", err)
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	if err := td.db.UpdateItem(todoItem); err != nil {
-		log.Println("Error updating item: ", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	c.JSON(http.StatusOK, todoItem)
-}
-
-// implementation for DELETE /todo/:id
-// deletes a todo
-func (td *ToDoAPI) DeleteToDo(c *gin.Context) {
-	idS := c.Param("id")
-	id64, _ := strconv.ParseInt(idS, 10, 32)
-
-	if err := td.db.DeleteItem(int(id64)); err != nil {
-		log.Println("Error deleting item: ", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	c.Status(http.StatusOK)
-}
-
-// implementation for DELETE /todo
-// deletes all todos
-func (td *ToDoAPI) DeleteAllToDo(c *gin.Context) {
-
-	if err := td.db.DeleteAll(); err != nil {
-		log.Println("Error deleting all items: ", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	c.Status(http.StatusOK)
-}
-
-/*   SPECIAL HANDLERS FOR DEMONSTRATION - CRASH SIMULATION AND HEALTH CHECK */
-
-// implementation for GET /crash
-// This simulates a crash to show some of the benefits of the
-// gin framework
-
-/*
-func (td *ToDoAPI) CrashSim(c *gin.Context) {
-	//panic() is go's version of throwing an exception
-	panic("Simulating an unexpected crash")
-}
-
-// implementation of GET /health. It is a good practice to build in a
-// health check for your API.  Below the results are just hard coded
-// but in a real API you can provide detailed information about the
-// health of your API with a Health Check
-func (td *ToDoAPI) HealthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK,
-		gin.H{
-			"status":             "ok",
-			"version":            "1.0.0",
-			"uptime":             100,
-			"users_processed":    1000,
-			"errors_encountered": 10,
-		})
-}
-
-*/

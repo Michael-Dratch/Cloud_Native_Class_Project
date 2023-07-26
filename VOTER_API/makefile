@@ -34,10 +34,10 @@ load-db:
 	$JsonBody = $Body | ConvertTo-Json
 
 Invoke-RestMethod
-		-Method = "POST"
-		-Uri =  "http://localhost:1080/voters/2"
-		-Body = $JsonBody
-		-ContentType = "application/json"
+		-Method "POST"
+		-Uri  "http://localhost:1080/voters/2"
+		-Body $JsonBody
+		-ContentType "application/json"
 	
 
 

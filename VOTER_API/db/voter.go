@@ -116,6 +116,12 @@ func (v *VoterList) GetVoterPoll(voterID uint, pollID uint) (VoterPoll, error){
 	return VoterPoll{}, errors.New("Poll ID does not exist for this voter")
 }
 
+func (v *VoterList) DoesVoterPollExist(voterID uint, pollID uint) bool {
+	_, err := v.GetVoterPoll(voterID, pollID)
+	if err == nil { return true } 
+	return false 
+}
+
 func (v *VoterList) AddVoterPoll(voterID uint, newPoll VoterPoll) error{
 	voter, err := v.GetVoter(voterID)
 	if err != nil {
