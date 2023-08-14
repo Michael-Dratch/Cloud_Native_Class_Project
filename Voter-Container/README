@@ -14,3 +14,6 @@ just run
 "docker-compose up"
 
 from the Voter-Container directory.
+
+Dockerhub multi-architecture image for amd64 and arm64:
+https://hub.docker.com/repository/docker/michaeldratch/voter-api
