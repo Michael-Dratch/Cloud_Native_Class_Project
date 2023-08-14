@@ -44,14 +44,14 @@ func main() {
 	r.PUT("/voters/:id", apiHandler.UpdateVoter)
 	r.DELETE("/voters/:id", apiHandler.DeleteVoter)
 
-	// r.GET("/voters/:id/polls", apiHandler.GetVoterHistory)
+	r.GET("/voters/:id/polls", apiHandler.GetVoterHistory)
 
-	// r.GET("/voters/:id/polls/:pollid", apiHandler.GetVoterPoll)
-	// r.POST("/voters/:id/polls/:pollid", apiHandler.AddVoterPoll)
-	// r.PUT("/voters/:id/polls/:pollid", apiHandler.UpdateVoterPoll)
-	// r.DELETE("/voters/:id/polls/:pollid", apiHandler.DeleteVoterPoll)
+	r.GET("/voters/:id/polls/:pollid", apiHandler.GetVoterPoll)
+	r.POST("/voters/:id/polls/:pollid", apiHandler.AddVoterPoll)
+	r.PUT("/voters/:id/polls/:pollid", apiHandler.UpdateVoterPoll)
+	r.DELETE("/voters/:id/polls/:pollid", apiHandler.DeleteVoterPoll)
 
-	// r.GET("/voters/health", apiHandler.HealthCheck)
+	r.GET("/voters/health", apiHandler.HealthCheck)
 	
 	serverPath := fmt.Sprintf("%s:%d", hostFlag, portFlag)
 	r.Run(serverPath)

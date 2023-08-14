@@ -217,94 +217,93 @@ func (v *VoterData) DeleteVoter(voterID uint) error {
 	return nil
 }
 
-// func (v *VoterData) GetVoterHistory(voterID uint) ([]VoterPoll, error){
-// 	voter, err := v.GetVoter(voterID)
-// 	if err != nil {
-// 		return make([]VoterPoll, 0) , errors.New("Voter ID does not exist")
-// 	}
+func (v *VoterData) GetVoterHistory(voterID uint) ([]VoterPoll, error){
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return make([]VoterPoll, 0) , errors.New("Voter ID does not exist")
+	}
 	
-// 	return voter.VoteHistory, nil
-// }
+	return voter.VoteHistory, nil
+}
 
-// func (v *VoterData) GetVoterPoll(voterID uint, pollID uint) (VoterPoll, error){
-// 	voter, err := v.GetVoter(voterID)
-// 	if err != nil {
-// 		return VoterPoll{} , errors.New("Voter ID does not exist")
-// 	} 
+func (v *VoterData) GetVoterPoll(voterID uint, pollID uint) (VoterPoll, error){
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return VoterPoll{} , errors.New("Voter ID does not exist")
+	} 
 
-// 	for _, poll := range voter.VoteHistory{
-// 		if poll.PollID == pollID{
-// 			return poll, nil
-// 		}
-// 	}
-// 	log.Println("Error: Poll ID does not exist for this voter")
-// 	return VoterPoll{}, errors.New("Poll ID does not exist for this voter")
-// }
+	for _, poll := range voter.VoteHistory{
+		if poll.PollID == pollID{
+			return poll, nil
+		}
+	}
+	log.Println("Error: Poll ID does not exist for this voter")
+	return VoterPoll{}, errors.New("Poll ID does not exist for this voter")
+}
 
-// func (v *VoterData) DoesVoterPollExist(voterID uint, pollID uint) bool {
-// 	_, err := v.GetVoterPoll(voterID, pollID)
-// 	if err == nil { return true } 
-// 	return false 
-// }
+func (v *VoterData) DoesVoterPollExist(voterID uint, pollID uint) bool {
+	_, err := v.GetVoterPoll(voterID, pollID)
+	if err == nil { return true } 
+	return false 
+}
 
-// func (v *VoterData) AddVoterPoll(voterID uint, newPoll VoterPoll) error{
-// 	voter, err := v.GetVoter(voterID)
-// 	if err != nil {
-// 		return errors.New("Voter ID does not exist")
-// 	} 
+func (v *VoterData) AddVoterPoll(voterID uint, newPoll VoterPoll) error{
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return errors.New("Voter ID does not exist")
+	} 
 
-// 	for _, poll := range voter.VoteHistory{
-// 		if newPoll.PollID == poll.PollID{
-// 			return errors.New("Poll ID already exists for this voter")
-// 		}
-// 	}
+	for _, poll := range voter.VoteHistory{
+		if newPoll.PollID == poll.PollID{
+			return errors.New("Poll ID already exists for this voter")
+		}
+	}
 
-// 	voter.VoteHistory = append(voter.VoteHistory, newPoll)
-// 	v.Voters[voterID] = voter
-// 	return nil
-// }
+	voter.VoteHistory = append(voter.VoteHistory, newPoll)
+	v.UpdateVoter(voterID, voter)
+	return nil
+}
 
-// func (v *VoterData) UpdateVoterPoll(voterID uint, pollID uint, updateData VoterPoll) error{
+func (v *VoterData) UpdateVoterPoll(voterID uint, pollID uint, updateData VoterPoll) error{
 	
-// 	oldData,err := v.GetVoterPoll(voterID, pollID)
-// 	if err != nil {
-// 		return errors.New("Error: Voter poll does not exist")
-// 	}
+	oldData,err := v.GetVoterPoll(voterID, pollID)
+	if err != nil {
+		return errors.New("Error: Voter poll does not exist")
+	}
 
-// 	updateData = removeZeroValuesFromPollUpdateData(oldData, updateData)
-// 	voter,_ := v.GetVoter(voterID)
-// 	for index,poll := range voter.VoteHistory{
-// 		if poll.PollID == pollID{
-// 			voter.VoteHistory[index] = updateData
-// 			break
-// 		}
-// 	}
+	updateData = removeZeroValuesFromPollUpdateData(oldData, updateData)
+	voter,_ := v.GetVoter(voterID)
+	for index,poll := range voter.VoteHistory{
+		if poll.PollID == pollID{
+			voter.VoteHistory[index] = updateData
+			break
+		}
+	}
+	v.UpdateVoter(voterID, voter)
+	return nil
+}
 
-// 	v.Voters[voterID] = voter
-// 	return nil
-// }
+func removeZeroValuesFromPollUpdateData(oldData VoterPoll, updateData VoterPoll) VoterPoll{
+	if updateData.VoteDate.IsZero() {
+		updateData.VoteDate = oldData.VoteDate
+	}
+	return updateData
+}
 
-// func removeZeroValuesFromPollUpdateData(oldData VoterPoll, updateData VoterPoll) VoterPoll{
-// 	if updateData.VoteDate.IsZero() {
-// 		updateData.VoteDate = oldData.VoteDate
-// 	}
-// 	return updateData
-// }
+func (v *VoterData) DeleteVoterPoll(voterID uint, pollID uint) error{
+	voter, err := v.GetVoter(voterID)
+	if err != nil {
+		return errors.New("Voter does not exists")
+	}
 
-// func (v *VoterData) DeleteVoterPoll(voterID uint, pollID uint) error{
-// 	voter, ok := v.Voters[voterID]
-// 	if ok == false {
-// 		return errors.New("Voter does not exists")
-// 	}
+	for index,poll := range voter.VoteHistory{
+		if poll.PollID == pollID{
+			voter.VoteHistory = append(voter.VoteHistory[:index], voter.VoteHistory[index+1:]... )
+			break
+		}
+	}
 
-// 	for index,poll := range voter.VoteHistory{
-// 		if poll.PollID == pollID{
-// 			voter.VoteHistory = append(voter.VoteHistory[:index], voter.VoteHistory[index+1:]... )
-// 			break
-// 		}
-// 	}
-
-// 	v.Voters[voterID] = voter
-// 	return nil
-// }
+	v.UpdateVoter(voterID, voter)
+	return nil
+}
 
