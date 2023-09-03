@@ -1,8 +1,8 @@
 version: "3"
 
 services:
-  poll-api:
-    build: "./poll-api"
+  voter-api:
+    build: "./voter-api"
     ports:
       - "1080:1080"
     environment:
