@@ -1,0 +1,19 @@
+Michael Dratch
+8/14/23
+CS 680
+
+Cloud Native Packaging
+
+Summary:
+An API for polling data using redis for caching and data persistence.
+
+Instructions:
+The build and run configuration are set in the docker-compose file
+just run
+
+"docker-compose up"
+
+from the Voter-Container directory.
+
+Dockerhub multi-architecture image for amd64 and arm64:
+https://hub.docker.com/repository/docker/michaeldratch/voter-api
