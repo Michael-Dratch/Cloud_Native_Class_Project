@@ -1,4 +1,4 @@
-module voter-api
+module poll-api
 
 go 1.20
 

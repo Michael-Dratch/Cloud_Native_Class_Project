@@ -28,22 +28,22 @@ type Poll struct {
 	PollID uint
 	PollTitle string
 	PollQuestion string
-	PollOptions []pollOption
+	PollOptions []PollOption
 }
 
-type pollOption struct {
+type PollOption struct {
 	PollOptionID uint
 	PollOptionText string
 }
 
 
 
-type PollsData struct {
+type PollData struct {
 	cache
 }
 
 // Creat New Voter Data Handler 
-func New() (*PollsData, error){
+func New() (*PollData, error){
 
 	redisUrl := os.Getenv("REDIS_URL")
 
@@ -55,7 +55,7 @@ func New() (*PollsData, error){
 
 }
 
-func NewWithCacheInstance(location string) (*PollsData, error) {
+func NewWithCacheInstance(location string) (*PollData, error) {
 	
 	client := redis.NewClient(&redis.Options{
 		Addr:location,
@@ -72,7 +72,7 @@ func NewWithCacheInstance(location string) (*PollsData, error) {
 	jsonHelper := rejson.NewReJSONHandler()
 	jsonHelper.SetGoRedisClientWithContext(ctx, client)
 
-	return &PollsData{
+	return &PollData{
 		cache: cache{
 			cacheClient: client,
 			jsonHelper: jsonHelper,
@@ -90,7 +90,7 @@ func redisPollKeyFromId(id int) string {
 	return fmt.Sprintf("%s%d", RedisPollKeyPrefix, id)
 }
 
-func (p *PollsData) getPollFromRedis(key string, poll *Poll) error {
+func (p *PollData) getPollFromRedis(key string, poll *Poll) error {
 	pollObject, err := p.jsonHelper.JSONGet(key, ".")
 	if err != nil {
 		return err
@@ -109,14 +109,14 @@ func NewPoll(pollID uint, pollTitle string, pollQuestion string) (*Poll, error){
 		PollID: pollID,
 		PollTitle: pollTitle,
 		PollQuestion: pollQuestion,
-		PollOptions:make ([]pollOption, 0),
+		PollOptions:make ([]PollOption, 0),
 	}
 
 	return poll, nil
 }
 
-func NewPollOption(	pollOptionID uint, pollOptionText string) (*pollOption, error){
-	pollOption:= &pollOption{
+func NewPollOption(	pollOptionID uint, pollOptionText string) (*PollOption, error){
+	pollOption:= &PollOption{
 		PollOptionID: pollOptionID,
 		PollOptionText: pollOptionText,
 	}
@@ -124,7 +124,7 @@ func NewPollOption(	pollOptionID uint, pollOptionText string) (*pollOption, erro
 }
 
 
-func (p *PollsData) GetAllPolls() ([]Poll, error){
+func (p *PollData) GetAllPolls() ([]Poll, error){
 	var polls []Poll
 	var poll Poll
 
@@ -140,7 +140,7 @@ func (p *PollsData) GetAllPolls() ([]Poll, error){
 	return polls, nil
 } 
 
-func (p *PollsData) GetPoll(pollID uint) (Poll, error){
+func (p *PollData) GetPoll(pollID uint) (Poll, error){
 	
 	var poll Poll
 	pattern := redisPollKeyFromId(int(pollID))
@@ -152,7 +152,7 @@ func (p *PollsData) GetPoll(pollID uint) (Poll, error){
 	return poll, nil
 } 
 
-func (p *PollsData) AddPoll(poll Poll) error {
+func (p *PollData) AddPoll(poll Poll) error {
 
 	redisKey := redisPollKeyFromId(int(poll.PollID))
 	var existingItem Poll
@@ -169,7 +169,7 @@ func (p *PollsData) AddPoll(poll Poll) error {
 	return nil
 }
 
-func (p *PollsData) UpdatePoll(pollID uint, updateData Poll) error {
+func (p *PollData) UpdatePoll(pollID uint, updateData Poll) error {
 
 	redisKey := redisPollKeyFromId(int(pollID))
 	var existingPoll Poll
@@ -200,7 +200,7 @@ func removeZeroValuesFromUpdateData(oldData Poll, updateData Poll) Poll {
 	return updateData
 }
 
-func (p *PollsData) DeletePoll(pollID uint) error {
+func (p *PollData) DeletePoll(pollID uint) error {
 	pattern := redisPollKeyFromId(int(pollID))
 	numDeleted, err := p.cacheClient.Del(p.context, pattern).Result()
 	if err != nil {
@@ -213,19 +213,19 @@ func (p *PollsData) DeletePoll(pollID uint) error {
 	return nil
 }
 
-func (p *PollsData) GetPollOptions(pollID uint) ([]pollOption, error){
+func (p *PollData) GetPollOptions(pollID uint) ([]PollOption, error){
 	poll, err := p.GetPoll(pollID)
 	if err != nil {
-		return make([]pollOption, 0) , errors.New("Poll ID does not exist")
+		return make([]PollOption, 0) , errors.New("Poll ID does not exist")
 	}
 	
 	return poll.PollOptions, nil
 }
 
-func (p *PollsData) GetPollOption(pollID uint, pollOptionID uint) (pollOption, error){
+func (p *PollData) GetPollOption(pollID uint, pollOptionID uint) (PollOption, error){
 	poll, err := p.GetPoll(pollID)
 	if err != nil {
-		return pollOption{} , errors.New("Poll ID does not exist")
+		return PollOption{} , errors.New("Poll ID does not exist")
 	} 
 
 	for _, pollOption := range poll.PollOptions{
@@ -234,72 +234,72 @@ func (p *PollsData) GetPollOption(pollID uint, pollOptionID uint) (pollOption, e
 		}
 	}
 	log.Println("Error: Poll option ID does not exist for this poll")
-	return pollOption{}, errors.New("Poll option ID does not exist for this poll")
+	return PollOption{}, errors.New("Poll option ID does not exist for this poll")
 }
 
-func (p *PollsData) DoesVoterPollExist(voterID uint, pollID uint) bool {
+func (p *PollData) DoesPollOptionExist(pollID uint, pollOptionID uint) bool {
 	_, err := p.GetPollOption(pollID, pollOptionID)
 	if err == nil { return true } 
 	return false 
 }
 
-func (p *PollsData) AddVoterPoll(voterID uint, newPoll VoterPoll) error{
-	voter, err := p.GetVoter(voterID)
+func (p *PollData) AddPollOption(pollID uint, newPollOption PollOption) error{
+	poll, err := p.GetPoll(pollID)
 	if err != nil {
-		return errors.New("Voter ID does not exist")
+		return errors.New("Poll ID does not exist")
 	} 
 
-	for _, poll := range voter.VoteHistory{
-		if newPoll.PollID == poll.PollID{
-			return errors.New("Poll ID already exists for this voter")
+	for _, pollOption := range poll.PollOptions{
+		if newPollOption.PollOptionID == pollOption.PollOptionID{
+			return errors.New("Poll Option ID already exists for this poll")
 		}
 	}
 
-	voter.VoteHistory = append(voter.VoteHistory, newPoll)
-	p.UpdateVoter(voterID, voter)
+	poll.PollOptions = append(poll.PollOptions, newPollOption)
+	p.UpdatePoll(pollID, poll)
 	return nil
 }
 
-func (p *PollsData) UpdateVoterPoll(voterID uint, pollID uint, updateData VoterPoll) error{
+func (p *PollData) UpdatePollOption(pollID uint, pollOptionID uint, updateData PollOption) error{
 	
-	oldData,err := p.GetVoterPoll(voterID, pollID)
+	oldData,err := p.GetPollOption(pollID, pollOptionID)
 	if err != nil {
-		return errors.New("Error: Voter poll does not exist")
+		return errors.New("Error: Poll option does not exist")
 	}
 
-	updateData = removeZeroValuesFromPollUpdateData(oldData, updateData)
-	voter,_ := p.GetVoter(voterID)
-	for index,poll := range voter.VoteHistory{
-		if poll.PollID == pollID{
-			voter.VoteHistory[index] = updateData
+	updateData = removeZeroValuesFromPollOptionUpdateData(oldData, updateData)
+	poll,_ := p.GetPoll(pollID)
+	for index, pollOption := range poll.PollOptions{
+		if pollOption.PollOptionID == pollOptionID{
+			poll.PollOptions[index] = updateData
 			break
 		}
 	}
-	p.UpdateVoter(voterID, voter)
+	p.UpdatePoll(pollID, poll)
 	return nil
 }
 
-func removeZeroValuesFromPollUpdateData(oldData VoterPoll, updateData VoterPoll) VoterPoll{
-	if updateData.VoteDate.IsZero() {
-		updateData.VoteDate = oldData.VoteDate
+func removeZeroValuesFromPollOptionUpdateData(oldData PollOption, updateData PollOption) PollOption{
+	if updateData.PollOptionText == "" {
+		updateData.PollOptionText = oldData.PollOptionText
 	}
 	return updateData
 }
 
-func (p *PollsData) DeleteVoterPoll(voterID uint, pollID uint) error{
-	voter, err := p.GetVoter(voterID)
+func (p *PollData) DeletePollOption(pollID uint, pollOptionID uint) error{
+	poll, err := p.GetPoll(pollID)
 	if err != nil {
-		return errors.New("Voter does not exists")
+		return errors.New("Poll does not exists")
 	}
 
-	for index,poll := range voter.VoteHistory{
-		if poll.PollID == pollID{
-			voter.VoteHistory = append(voter.VoteHistory[:index], voter.VoteHistory[index+1:]... )
+	for index,pollOption := range poll.PollOptions{
+		if pollOption.PollOptionID == pollOptionID{
+			poll.PollOptions = append(poll.PollOptions[:index], poll.PollOptions[index+1:]... )
 			break
 		}
 	}
 
-	p.UpdateVoter(voterID, voter)
+	p.UpdatePoll(pollID, poll)
 	return nil
 }
 

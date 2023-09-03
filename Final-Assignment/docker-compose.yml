@@ -1,8 +1,8 @@
 version: "3"
 
 services:
-  voter-api:
-    build: "./voter-api"
+  poll-api:
+    build: "./poll-api"
     ports:
       - "1080:1080"
     environment:
@@ -14,7 +14,7 @@ services:
     ports:
       - "6379:6379"
       - "8001:8001"
-    environment:
-      REDIS_ARGS: "--appendonly yes"
+    # environment:
+    #   REDIS_ARGS: "--appendonly yes"
     volumes:
       - ./redis_data/:/data

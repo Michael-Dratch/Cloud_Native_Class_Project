@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"voter-api/api"
+	"poll-api/api"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -37,18 +37,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	r.GET("polls/")
+	r.GET("polls/", apiHandler.ListAllPolls)
 	
-	r.GET("polls/:pollid", apiHandler.GetVoterPoll)
-	r.POST("polls/:pollid", apiHandler.AddVoterPoll)
-	r.PUT("polls/:pollid", apiHandler.UpdateVoterPoll)
-	r.DELETE("polls/:pollid", apiHandler.DeleteVoterPoll)
+	r.GET("polls/:id", apiHandler.GetPoll)
+	r.POST("polls/:id", apiHandler.AddPoll)
+	r.PUT("polls/:id", apiHandler.UpdatePoll)
+	r.DELETE("polls/:id", apiHandler.DeletePoll)
 
-	r.GET("polls/:pollid/polloption/:polloptionid", apiHandler.GetVoterPoll)
-	r.POST("polls/:pollid/polloption/:polloptionid", apiHandler.AddVoterPoll)
-	r.PUT("polls/:pollid/polloption/:polloptionid", apiHandler.UpdateVoterPoll)
-	r.DELETE("polls/:pollid/polloption/:polloptionid", apiHandler.DeleteVoterPoll)
-	
+	r.GET("polls/:id/polloption/:optionid", apiHandler.GetPollOption)
+	r.POST("polls/:id/polloption/:optionid", apiHandler.AddPollOption)
+	r.PUT("polls/:id/polloption/:optionid", apiHandler.UpdatePollOption)
+	r.DELETE("polls/:id/polloption/:optionid", apiHandler.DeletePollOption)
+
 	r.GET("/voters/health", apiHandler.HealthCheck)
 	
 	serverPath := fmt.Sprintf("%s:%d", hostFlag, portFlag)

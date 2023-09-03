@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	"voter-api/db"
+	"poll-api/db"
 
 	"github.com/gin-gonic/gin"
 )
 
-type VoterAPI struct {
-	db *db.VoterData
+type PollAPI struct {
+	db *db.PollData
 	bootTime time.Time
 	totalCalls int
 	totalErrors int
@@ -25,260 +25,258 @@ type HealthCheckData struct {
 	TotalErrors int
 }
 
-func New() (*VoterAPI, error) {
+func New() (*PollAPI, error) {
 	dbHandler, err := db.New()
 	if err != nil {
 		return nil, err
 	}
 
-	return &VoterAPI{   db: dbHandler, 
+	return &PollAPI{   db: dbHandler, 
 						bootTime: time.Now(),
 						totalCalls: 0,
 						totalErrors: 0,}, nil
 }
 
-func (voterAPI *VoterAPI) ListAllVoters(c *gin.Context) {
-	voterAPI.totalCalls++
-	voterList, err := voterAPI.db.GetAllVoters()
+func (pollAPI *PollAPI) ListAllPolls(c *gin.Context) {
+	pollAPI.totalCalls++
+	pollList, err := pollAPI.db.GetAllPolls()
 	if err != nil {
-		voterAPI.handleInternalServerError(c, "Error Getting All Voters: ", err)
+		pollAPI.handleInternalServerError(c, "Error Getting All Polls: ", err)
 		return
 	}
 
-	if voterList == nil {
-		voterList = make([]db.Voter, 0)
+	if pollList == nil {
+		pollList = make([]db.Poll, 0)
 	}
 
-	c.JSON(http.StatusOK, voterList)
+	c.JSON(http.StatusOK, pollList)
 }
 
-func (voterAPI *VoterAPI) GetVoter(c *gin.Context) {
-	voterAPI.totalCalls++
+func (pollAPI *PollAPI) GetPoll(c *gin.Context) {
+	pollAPI.totalCalls++
 	id, err := getParameterUint(c, "id")
 	if err != nil {
-		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
 		return
 	}
 
-	voter, err := voterAPI.db.GetVoter(id)
+	poll, err := pollAPI.db.GetPoll(id)
 	if err != nil {
-		voterAPI.handleBadRequestError(c, "Voter not found: ", err)
-		return
-	}
-
-	c.JSON(http.StatusOK, voter)
-}
-
-func (voterAPI *VoterAPI) AddVoter(c *gin.Context) {
-	voterAPI.totalCalls++
-	
-	id, err := getParameterUint(c, "id")
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
-		return
-	}
-
-	var voter db.Voter
-	if err := c.ShouldBindJSON(&voter); err != nil {
-		voterAPI.handleBadRequestError(c, "Error binding JSON: ", err)
-		return
-	}
-
-	if id != uint(voter.VoterID) {
-		voterAPI.handleBadRequestError(c, "ERROR: ID in url and request body do not match", err)
-		return
-	}
-
-	if err := voterAPI.db.AddVoter(voter); err != nil {
-		voterAPI.handleInternalServerError(c, "Error adding voter: ", err)
-		return
-	}
-
-	c.JSON(http.StatusOK, voter)
-}
-
-func (voterAPI *VoterAPI) UpdateVoter(c *gin.Context) {
-	voterAPI.totalCalls++
-	id, err := getParameterUint(c, "id")
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
-		return
-	}
-
-	var voter db.Voter
-	if err := c.ShouldBindJSON(&voter); err != nil {
-		voterAPI.handleBadRequestError(c, "Error binding JSON: ", err)
-		return
-	}
-
-	if id != uint(voter.VoterID) {
-		voterAPI.handleBadRequestError(c, "ERROR: ID in url and request body do not match", err)
-		return
-	}
-
-	err = voterAPI.db.UpdateVoter(voter.VoterID, voter)
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Voter does not exist", err)
-		return
-	}
-	c.JSON(http.StatusOK, voter)
-}
-
-func (voterAPI *VoterAPI) DeleteVoter(c *gin.Context) {
-	voterAPI.totalCalls++
-	id, err := getParameterUint(c, "id")
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
-		return
-	}
-
-	err = voterAPI.db.DeleteVoter(id)
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Voter does not exist", err)
-		return
-	}
-	
-	c.Status(http.StatusOK)
-}
-
-func (voterAPI *VoterAPI) GetVoterHistory(c *gin.Context) {
-	voterAPI.totalCalls++
-
-	id, err := getParameterUint(c, "id")
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
-		return
-	}
-
-	voterHistory, err := voterAPI.db.GetVoterHistory(id)
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Voter does not exist", err)
-		return
-	}
-
-	c.JSON(http.StatusOK, voterHistory)
-}
-
-func (voterAPI *VoterAPI) GetVoterPoll(c *gin.Context) {
-	voterAPI.totalCalls++
-	id, err := getParameterUint(c, "id")
-	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting voter id to int", err)
-		return
-	}
-
-	pollID, err := getParameterUint(c, "pollid")
-	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
-		return
-	}
-
-	poll, err := voterAPI.db.GetVoterPoll(id, pollID)
-	if err != nil {
-		voterAPI.handleBadRequestError(c, "Voter has not voted in this poll", err)
+		pollAPI.handleBadRequestError(c, "Poll not found: ", err)
 		return
 	}
 
 	c.JSON(http.StatusOK, poll)
 }
 
-func (voterAPI *VoterAPI) AddVoterPoll(c *gin.Context) {
-	voterAPI.totalCalls++
-	voterID, err := getParameterUint(c, "id")
+func (pollAPI *PollAPI) AddPoll(c *gin.Context) {
+	pollAPI.totalCalls++
+	
+	id, err := getParameterUint(c, "id")
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		return
+	}
+
+	var poll db.Poll
+	if err := c.ShouldBindJSON(&poll); err != nil {
+		pollAPI.handleBadRequestError(c, "Error binding JSON: ", err)
+		return
+	}
+
+	if id != uint(poll.PollID) {
+		pollAPI.handleBadRequestError(c, "ERROR: ID in url and request body do not match", err)
+		return
+	}
+
+	if err := pollAPI.db.AddPoll(poll); err != nil {
+		pollAPI.handleInternalServerError(c, "Error adding poll: ", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, poll)
+}
+
+func (pollAPI *PollAPI) UpdatePoll(c *gin.Context) {
+	pollAPI.totalCalls++
+	id, err := getParameterUint(c, "id")
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		return
+	}
+
+	var poll db.Poll
+	if err := c.ShouldBindJSON(&poll); err != nil {
+		pollAPI.handleBadRequestError(c, "Error binding JSON: ", err)
+		return
+	}
+
+	if id != uint(poll.PollID) {
+		pollAPI.handleBadRequestError(c, "ERROR: ID in url and request body do not match", err)
+		return
+	}
+
+	err = pollAPI.db.UpdatePoll(poll.PollID, poll)
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Poll does not exist", err)
+		return
+	}
+	c.JSON(http.StatusOK, poll)
+}
+
+func (pollAPI *PollAPI) DeletePoll(c *gin.Context) {
+	pollAPI.totalCalls++
+	id, err := getParameterUint(c, "id")
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		return
+	}
+
+	err = pollAPI.db.DeletePoll(id)
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Poll does not exist", err)
+		return
+	}
+	
+	c.Status(http.StatusOK)
+}
+
+func (pollAPI *PollAPI) GetPollOptions(c *gin.Context) {
+	pollAPI.totalCalls++
+
+	pollID, err := getParameterUint(c, "id")
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		return
+	}
+
+	pollOptions, err := pollAPI.db.GetPollOptions(pollID)
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Poll does not exist", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, pollOptions)
+}
+
+func (pollAPI *PollAPI) GetPollOption(c *gin.Context) {
+	pollAPI.totalCalls++
+	pollID, err := getParameterUint(c, "id")
 	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting voter ID to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
 		return
 	}
 
-	pollID, err := getParameterUint(c, "pollid")
+	optionID, err := getParameterUint(c, "optionid")
 	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll option id to int", err)
 		return
 	}
 
-	var voterPoll db.VoterPoll
-	if err := c.ShouldBindJSON(&voterPoll); err != nil {
-		voterAPI.handleBadRequestError(c, "Error binding JSON: ", err)
+	poll, err := pollAPI.db.GetPollOption(pollID, optionID)
+	if err != nil {
+		pollAPI.handleBadRequestError(c, "Poll does not have this option", err)
 		return
 	}
 
-	voterPoll.VoteDate = time.Now()
+	c.JSON(http.StatusOK, poll)
+}
 
-	if pollID != uint(voterPoll.PollID) {
-		voterAPI.handleBadRequestError(c, "ERROR: poll ID in url and request body do not match", nil)
+func (pollAPI *PollAPI) AddPollOption(c *gin.Context) {
+	pollAPI.totalCalls++
+	pollID, err := getParameterUint(c, "id")
+	if err != nil { 
+		pollAPI.handleBadRequestError(c, "Error converting poll ID to int", err)
 		return
 	}
 
-	pollExists := voterAPI.db.DoesVoterPollExist(voterID, pollID)
+	optionID, err := getParameterUint(c, "optionid")
+	if err != nil { 
+		pollAPI.handleBadRequestError(c, "Error converting poll option id to int", err)
+		return
+	}
+
+	var pollOption db.PollOption
+	if err := c.ShouldBindJSON(&pollOption); err != nil {
+		pollAPI.handleBadRequestError(c, "Error binding JSON: ", err)
+		return
+	}
+
+	if optionID != uint(pollOption.PollOptionID) {
+		pollAPI.handleBadRequestError(c, "ERROR: poll option ID in url and request body do not match", nil)
+		return
+	}
+
+	pollExists := pollAPI.db.DoesPollOptionExist(pollID, optionID)
 	if pollExists {
-		voterAPI.handleBadRequestError(c, "ERROR: Voter cannot vote in the same poll twice: ", err)
+		pollAPI.handleBadRequestError(c, "ERROR: Poll Option ID already exists in Poll ", err)
 		return
 	}
 
-	if err := voterAPI.db.AddVoterPoll(voterID, voterPoll); err != nil {
-		voterAPI.handleInternalServerError(c, "Error adding voter poll: ", err)
+	if err := pollAPI.db.AddPollOption(pollID, pollOption); err != nil {
+		pollAPI.handleInternalServerError(c, "Error adding poll option: ", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, voterPoll)
+	c.JSON(http.StatusOK, pollOption)
 }
 
-func (voterAPI *VoterAPI) UpdateVoterPoll(c *gin.Context) {
-	voterAPI.totalCalls++
-	voterID, err := getParameterUint(c, "id")
+func (pollAPI *PollAPI) UpdatePollOption(c *gin.Context) {
+	pollAPI.totalCalls++
+	pollID, err := getParameterUint(c, "id")
 	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting voter ID to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll ID to int", err)
 		return
 	}
 
-	pollID, err := getParameterUint(c, "pollid")
+	optionID, err := getParameterUint(c, "optionid")
 	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll id to int", err)
 		return
 	}
 
-	pollExists := voterAPI.db.DoesVoterPollExist(voterID, pollID)
+	pollExists := pollAPI.db.DoesPollOptionExist(pollID, optionID)
 	if pollExists == false {
-		voterAPI.handleBadRequestError(c, "No vote data exists for this voter in this poll", errors.New("Voter poll does not exist"))
+		pollAPI.handleBadRequestError(c, "No option exists for this poll option ID in this poll", errors.New("Poll option does not exist"))
 		return
 	}
 
-	var voterPoll db.VoterPoll
-	if err := c.ShouldBindJSON(&voterPoll); err != nil {
-		voterAPI.handleBadRequestError(c, "Error binding JSON: ", err)
+	var pollOption db.PollOption
+	if err := c.ShouldBindJSON(&pollOption); err != nil {
+		pollAPI.handleBadRequestError(c, "Error binding JSON: ", err)
 		return
 	}
 
-	if pollID != uint(voterPoll.PollID) {
-		voterAPI.handleBadRequestError(c, "ERROR: poll ID in url and request body do not match", nil)
+	if optionID != uint(pollOption.PollOptionID) {
+		pollAPI.handleBadRequestError(c, "ERROR: poll option ID in url and request body do not match", nil)
 		return
 	}
 
-	voterAPI.db.UpdateVoterPoll(voterID, pollID, voterPoll)
-	c.JSON(http.StatusOK, voterPoll)
+	pollAPI.db.UpdatePollOption(pollID, optionID, pollOption)
+	c.JSON(http.StatusOK, pollOption)
 }
 
-func (voterAPI *VoterAPI) DeleteVoterPoll(c *gin.Context) {
-	voterAPI.totalCalls++
-	voterID, err := getParameterUint(c, "id")
+func (pollAPI *PollAPI) DeletePollOption(c *gin.Context) {
+	pollAPI.totalCalls++
+	pollID, err := getParameterUint(c, "id")
 	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting voter ID to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll ID to int", err)
 		return
 	}
 
-	pollID, err := getParameterUint(c, "pollid")
+	optionID, err := getParameterUint(c, "optionid")
 	if err != nil { 
-		voterAPI.handleBadRequestError(c, "Error converting poll id to int", err)
+		pollAPI.handleBadRequestError(c, "Error converting poll option id to int", err)
 		return
 	}
 
-	pollExists := voterAPI.db.DoesVoterPollExist(voterID, pollID)
-	if pollExists == false {
-		voterAPI.handleBadRequestError(c, "No vote data exists for this voter in this poll", errors.New("Voter poll does not exist"))
+	pollOptionExists := pollAPI.db.DoesPollOptionExist(pollID, optionID)
+	if pollOptionExists == false {
+		pollAPI.handleBadRequestError(c, "No poll option data exists for this poll option in this poll", errors.New("Pollpoll does not exist"))
 		return
 	}
 
-	voterAPI.db.DeleteVoterPoll(voterID, pollID)
+	pollAPI.db.DeletePollOption(pollID, optionID)
 	c.Status(http.StatusOK)
 }
 
@@ -291,21 +289,21 @@ func getParameterUint(c *gin.Context, name string) (uint, error) {
 	return uint(param64), nil
 }
 
-func (voterAPI *VoterAPI) handleBadRequestError(c *gin.Context, errorMessage string, err error) {
-	voterAPI.totalErrors++
+func (pollAPI *PollAPI) handleBadRequestError(c *gin.Context, errorMessage string, err error) {
+	pollAPI.totalErrors++
 	log.Println(errorMessage, err)
 	c.AbortWithStatus(http.StatusBadRequest)
 }
 
-func (voterAPI *VoterAPI) handleInternalServerError(c *gin.Context, errorMessage string, err error) {
-	voterAPI.totalErrors++
+func (pollAPI *PollAPI) handleInternalServerError(c *gin.Context, errorMessage string, err error) {
+	pollAPI.totalErrors++
 	log.Println(errorMessage, err)
 	c.AbortWithStatus(http.StatusInternalServerError)
 }
 
-func (voterAPI * VoterAPI) HealthCheck(c *gin.Context) {
-	healthData := HealthCheckData{UpTime: time.Now().Sub(voterAPI.bootTime).String(), 
-									TotalCalls: voterAPI.totalCalls,
-									TotalErrors: voterAPI.totalErrors,}
+func (pollAPI *PollAPI) HealthCheck(c *gin.Context) {
+	healthData := HealthCheckData{UpTime: time.Now().Sub(pollAPI.bootTime).String(), 
+									TotalCalls: pollAPI.totalCalls,
+									TotalErrors: pollAPI.totalErrors,}
 	c.IndentedJSON(http.StatusOK, healthData)
 }
