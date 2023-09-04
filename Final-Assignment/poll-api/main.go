@@ -21,7 +21,7 @@ var (
 func processCmdLineFlags() {
 
 	flag.StringVar(&hostFlag, "h", "0.0.0.0", "Listen on all interfaces")
-	flag.UintVar(&portFlag, "p", 1080, "Default Port")
+	flag.UintVar(&portFlag, "p", 1082, "Default Port")
 
 	flag.Parse()
 }

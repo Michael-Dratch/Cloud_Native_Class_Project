@@ -1,10 +1,30 @@
 version: "3"
 
 services:
+  vote-api:
+    build: "./vote-api"
+    ports:
+      - "1080:1080"
+    environment:
+      REDIS_URL: "redis:6379"
+      VOTERS_URL: "voter-api:1081"
+      POLLS_URL: "poll-api:1082"
+    depends_on:
+      - redis
+
   voter-api:
     build: "./voter-api"
     ports:
-      - "1080:1080"
+      - "1081:1081"
+    environment:
+      REDIS_URL: "redis:6379"
+    depends_on:
+      - redis
+
+  poll-api:
+    build: "./poll-api"
+    ports:
+      - "1082:1082"
     environment:
       REDIS_URL: "redis:6379"
     depends_on:
