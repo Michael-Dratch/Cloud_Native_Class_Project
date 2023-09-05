@@ -40,9 +40,9 @@ type Vote struct {
 
 type VoteDetails struct {
 	VoteID uint
-	Voter string
-	Poll string
-	PollOption string
+	Voter Voter
+	Poll Poll
+	PollOption PollOption
 	VoteDate time.Time
 }
 
@@ -52,6 +52,25 @@ type VoteKeys struct {
 	PollID uint
 	PollOptionID uint
 }
+
+type Voter struct {
+	VoterID uint
+	FirstName string
+	LastName string
+}
+
+type Poll struct {
+	PollID uint
+	PollTitle string
+	PollQuestion string
+	PollOptions []PollOption
+}
+
+type PollOption struct {
+	PollOptionID uint
+	PollOptionText string
+}
+
 
 type VoteData struct {
 	cache
@@ -223,40 +242,58 @@ func (v *VoteData) GetVoteDetails(voteID uint) (VoteDetails, error){
 	return voteDetails, nil
 } 
 
-func getVoterDetails(vote Vote) (string, error){
+func getVoterDetails(vote Vote) (Voter, error){
 	resp, err := http.Get(vote.Voter)
 	if err != nil {
-		return "", errors.New("Error: failed request from voter service: " + vote.Voter + err.Error())
+		return Voter{}, errors.New("Error: failed request from voter service: " + vote.Voter + err.Error())
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.New("Error: could not read body from voter request")
+		return Voter{}, errors.New("Error: could not read body from voter request")
 	}
-	return string(body), nil
+
+	var voter Voter
+	err = json.Unmarshal([]byte(body), &voter)
+	if err != nil {
+		return Voter{}, err
+	}
+
+	return voter, nil
 }
 
-func getPollDetails(vote Vote) (string, error){
+func getPollDetails(vote Vote) (Poll, error){
 	resp, err := http.Get(vote.Poll)
 	if err != nil {
-		return "", errors.New("Error: could not get poll details")
+		return Poll{}, errors.New("Error: could not get poll details")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.New("Error: could not get poll details")
+		return Poll{}, errors.New("Error: could not get poll details")
 	}
-	return string(body), nil
+
+	var poll Poll
+	err = json.Unmarshal([]byte(body), &poll)
+	if err != nil {
+		return Poll{}, err
+	}
+	return poll, nil
 }
 
-func getPollOptionDetails(vote Vote) (string, error){
+func getPollOptionDetails(vote Vote) (PollOption, error){
 	resp, err := http.Get(vote.PollOption)
 	if err != nil {
-		return "", errors.New("Error: could not get poll option details")
+		return PollOption{}, errors.New("Error: could not get poll option details")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.New("Error: could not get poll option details")
+		return PollOption{}, errors.New("Error: could not get poll option details")
 	}
-	return string(body), nil
+	var pollOption PollOption
+	err = json.Unmarshal([]byte(body), &pollOption)
+	if err != nil {
+		return PollOption{}, err
+	}
+	return pollOption, nil
 }
 
 func (v *VoteData) AddVote(voteKeys VoteKeys) error {
